@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API Test - HP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background: #128C7E;
+        }
+
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-image {
+            max-width: 300px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.scan-qr {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📱 WhatsApp API Test - HP</h1>
+
+    <div class="container">
+        <h2>🔗 Server Info</h2>
+        <p><strong>IP Server:</strong> <span id="serverIP">Loading...</span></p>
+        <button class="btn" onclick="getServerInfo()">🔄 Refresh Server Info</button>
+    </div>
+
+    <div class="container">
+        <h2>🔗 Koneksi WhatsApp</h2>
+        <button class="btn" onclick="connect()">🔗 Connect WhatsApp</button>
+        <button class="btn" onclick="checkStatus()">📊 Check Status</button>
+        <div id="status" class="status disconnected">Status: Disconnected</div>
+    </div>
+
+    <div class="container">
+        <h2>📱 QR Code</h2>
+        <button class="btn" onclick="getQRCode()">📱 Get QR Code</button>
+        <div id="qrContainer" class="qr-container" style="display: none;">
+            <img id="qrImage" class="qr-image" alt="QR Code">
+            <p>Scan QR code ini dengan WhatsApp di HP Anda</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>💬 Kirim Pesan</h2>
+        <div class="input-group">
+            <label>Nomor HP:</label>
+            <input type="text" id="phone" placeholder="6282130697168" value="6282130697168">
+        </div>
+        <div class="input-group">
+            <label>Pesan:</label>
+            <textarea id="message" placeholder="Test pesan dari HP"
+                rows="3">Test pesan dari HP via WhatsApp API</textarea>
+        </div>
+        <button class="btn" onclick="sendMessage()">📤 Kirim Pesan</button>
+        <div id="sendResult" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>🛠️ Tools</h2>
+        <button class="btn" onclick="resetSession()">🔄 Reset Session</button>
+        <button class="btn" onclick="cleanup()">🧹 Cleanup All</button>
+    </div>
+
+    <script>
+        const SERVER_IP = '10.8.3.2'; // Ganti dengan IP server Anda
+        const SERVER_PORT = '5568';
+        const BASE_URL = `http://${SERVER_IP}:${SERVER_PORT}`;
+
+        // Auto load server info
+        window.onload = function () {
+            getServerInfo();
+        };
+
+        async function getServerInfo() {
+            try {
+                const response = await fetch(`${BASE_URL}/server-info`);
+                const data = await response.json();
+                document.getElementById('serverIP').textContent = data.data.serverIP;
+                console.log('Server Info:', data);
+            } catch (error) {
+                console.error('Error getting server info:', error);
+                document.getElementById('serverIP').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function connect() {
+            try {
+                const response = await fetch(`${BASE_URL}/connect/1`);
+                const data = await response.json();
+                console.log('Connect:', data);
+                checkStatus();
+            } catch (error) {
+                console.error('Error connecting:', error);
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${BASE_URL}/status/1`);
+                const data = await response.json();
+                console.log('Status:', data);
+
+                const statusDiv = document.getElementById('status');
+                statusDiv.textContent = `Status: ${data.data.status}`;
+                statusDiv.className = `status ${data.data.status}`;
+
+                if (data.data.status === 'ready') {
+                    statusDiv.innerHTML = `Status: ${data.data.status} ✅`;
+                } else if (data.data.status === 'scan-qr') {
+                    statusDiv.innerHTML = `Status: ${data.data.status} 📱`;
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+            }
+        }
+
+        async function getQRCode() {
+            try {
+                const response = await fetch(`${BASE_URL}/qr-image/1`);
+                const data = await response.json();
+                console.log('QR Code:', data);
+
+                if (data.data.qrImage) {
+                    document.getElementById('qrImage').src = data.data.qrImage;
+                    document.getElementById('qrContainer').style.display = 'block';
+                } else {
+                    alert('QR Code belum tersedia. Coba connect dulu.');
+                }
+            } catch (error) {
+                console.error('Error getting QR code:', error);
+            }
+        }
+
+        async function sendMessage() {
+            const phone = document.getElementById('phone').value;
+            const message = document.getElementById('message').value;
+
+            if (!phone || !message) {
+                alert('Mohon isi nomor HP dan pesan');
+                return;
+            }
+
+            try {
+                const encodedMessage = encodeURIComponent(message);
+                const response = await fetch(`${BASE_URL}/test-send/${phone}/${encodedMessage}`);
+                const data = await response.json();
+                console.log('Send result:', data);
+
+                const resultDiv = document.getElementById('sendResult');
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                resultDiv.style.display = 'block';
+
+                if (data.code === 200) {
+                    resultDiv.style.background = '#d4edda';
+                    resultDiv.style.color = '#155724';
+                } else {
+                    resultDiv.style.background = '#f8d7da';
+                    resultDiv.style.color = '#721c24';
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                const resultDiv = document.getElementById('sendResult');
+                resultDiv.textContent = 'Error: ' + error.message;
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+            }
+        }
+
+        async function resetSession() {
+            try {
+                const response = await fetch(`${BASE_URL}/reset`);
+                const data = await response.json();
+                console.log('Reset:', data);
+                alert('Session berhasil direset');
+                checkStatus();
+            } catch (error) {
+                console.error('Error resetting:', error);
+            }
+        }
+
+        async function cleanup() {
+            if (confirm('Yakin ingin menghapus semua data?')) {
+                try {
+                    const response = await fetch(`${BASE_URL}/cleanup`);
+                    const data = await response.json();
+                    console.log('Cleanup:', data);
+                    alert('Cleanup berhasil');
+                    checkStatus();
+                } catch (error) {
+                    console.error('Error cleaning up:', error);
+                }
+            }
+        }
+
+        // Auto refresh status setiap 5 detik
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+
+</html>
